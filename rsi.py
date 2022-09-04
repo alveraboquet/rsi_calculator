@@ -15,7 +15,11 @@ import plotly.graph_objects as go
 class Rsi:
 
     def __init__(self, symbol, interval, file_path="historical_ohlcv/"):
-
+        """
+            # symbol: pair symbol from Binance such as ETHBTC
+            # interval: Kline interval for Binance client such as KLINE_INTERVAL_30MINUTE
+            # file_path: path to save the OHLCV data. 
+        """
         self.symbol = symbol
         self.interval = interval
         self.file_name = file_path + "Binance_{}_{}.csv".format(
@@ -29,8 +33,14 @@ class Rsi:
 
 
     def read_historical_klines(self,start_str, end_str):
+        """
+            # checks if the current interval exists within the pulled data, if not, calls the Binance API to fetch the data. 
+        """
         start_ms = date_to_milliseconds(start_str)
         end_ms = date_to_milliseconds(end_str)
+        if end_ms <= start_ms:
+            raise Exception("RSI start and end time are not right!")
+
         if self.df is not None and (start_ms in self.df["_id"].values and end_ms in self.df["_id"].values):
             return self.df.loc[(df["_id"] >= start_ms) & (df["_id"] <= end_ms)]
         else:
@@ -60,6 +70,10 @@ class Rsi:
         return df.loc[(df["_id"] >= start_ms) & (df["_id"] <= end_ms)]
 
     def calculate_rsi(self, start_str, end_str, periods=14):
+        """
+            # calculates the RSI for the time range [start,end] with a given period
+            # Throws an exception if the input is not valid.
+        """
         # if not enough data points for period, throw error 
         self.start_ms = date_to_milliseconds(start_str)
         self.end_ms = date_to_milliseconds(end_str)
@@ -83,6 +97,9 @@ class Rsi:
 
 
     def correlation(self):
+        """
+            # calculates the correlation between RSI and Volume
+        """
         if self.df is None:
             raise Exception("DataFrame is not initialized")
         if self.rsi is None:
@@ -94,13 +111,22 @@ class Rsi:
         return self.rsi.corr(df_["volume"])
 
     def rsi_value_frequencies(self,lower=30, higher=70):
+        """
+            # calculates the frequenceies of high and low RSI
+        """
         if self.rsi is None:
             raise Exception("RSI has to be calculated first!")
         lo = self.rsi.loc[self.rsi < lower].count()/self.rsi.shape[0]
         hi = self.rsi.loc[self.rsi > higher].count()/self.rsi.shape[0]
         return lo, hi
 
+    """
+        # plotting functions
+    """
     def plot_trades_histogram(self,nbins=100):
+        """
+        # plot trade activity as histogram
+        """
         if self.df is None:
             raise Exception("DataFrame is not initialized")
         fig = px.histogram(self.df,x="number_of_trades",nbins=nbins)
@@ -108,10 +134,16 @@ class Rsi:
 
 
     def plot_rsi(self):
+        """
+            # scatter plot of RSI
+        """
         fig = px.scatter(x=self.rsi.index,y=self.rsi.values)
         fig.show()
 
     def plot_price(self):
+        """
+            # candlestick plot for price data
+        """
         fig = go.Figure(data=[go.Candlestick(x=self.df["_id"],
                 open=self.df["open"],
                 high=self.df["high"],
